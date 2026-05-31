@@ -1,0 +1,15 @@
+{% extends "user/base.html" %}
+{% block title %}Payment Failed — EventNet{% endblock %}
+{% block content %}
+<div class="result-page">
+  <div class="result-card result-card--error">
+    <div class="result-icon">❌</div>
+    <h1>Payment Failed</h1>
+    <p>Your payment could not be processed. No amount has been deducted.</p>
+    <div class="result-actions">
+      <a href="{{ url_for('user.workshops') }}" class="btn btn-primary">Browse Workshops</a>
+      <a href="{{ url_for('user.dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

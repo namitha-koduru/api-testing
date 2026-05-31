@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% block title %}Registrations — Admin{% endblock %}
+{% block content %}
+<div class="admin-page-header">
+  <div>
+    <h1>🎟 Registrations</h1>
+    <p>All event registrations across workshops and meetings</p>
+  </div>
+  <span style="font-size:14px;color:var(--adm-text-muted);">{{ registrations|length }} total</span>
+</div>
+
+<!-- Summary Badges -->
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+  {% set confirmed = registrations|selectattr('status.value','eq','confirmed')|list|length %}
+  {% set pending   = registrations|selectattr('status.value','eq','pending')|list|length %}
+  {% set cancelled = registrations|selectattr('status.value','eq','cancelled')|list|length %}
+  <div style="background:#fff;border-radius:10px;padding:14px 20px;box-shadow:var(--adm-shadow);min-width:120px;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#166534;">{{ confirmed }}</div>
+    <div style="font-size:12px;color:var(--adm-text-muted);">Confirmed</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:14px 20px;box-shadow:var(--adm-shadow);min-width:120px;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#92400e;">{{ pending }}</div>
+    <div style="font-size:12px;color:var(--adm-text-muted);">Pending</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:14px 20px;box-shadow:var(--adm-shadow);min-width:120px;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#991b1b;">{{ cancelled }}</div>
+    <div style="font-size:12px;color:var(--adm-text-muted);">Cancelled</div>
+  </div>
+</div>
+
+<div class="admin-full-table-card">
+  <div class="admin-full-table-header">
+    <h2>All Registrations</h2>
+    <input type="text" id="adminTableSearch" placeholder="Search…"
+           style="padding:7px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;width:220px;outline:none;">
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="admin-data-table" id="adminTable">
+      <thead>
+        <tr>
+          <th>#</th><th>User</th><th>Event</th><th>Type</th>
+          <th>Status</th><th>Ticket</th><th>Payment</th><th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registrations %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>
+            {% if r.user %}
+            <div><strong>{{ r.user.full_name }}</strong></div>
+            <div style="font-size:12px;color:var(--adm-text-muted);">{{ r.user.email }}</div>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <div style="font-size:13px;font-weight:600;max-width:200px;">{{ r.event_title[:45] }}{% if r.event_title|length > 45 %}…{% endif %}</div>
+            {% if r.event_start_time %}
+            <div style="font-size:12px;color:var(--adm-text-muted);">{{ r.event_start_time.strftime('%b %d, %Y') }}</div>
+            {% endif %}
+          </td>
+          <td><span class="type-badge type-{{ r.reg_type.value }}">{{ r.reg_type.value|title }}</span></td>
+          <td><span class="status-badge status-{{ r.status.value }}">{{ r.status.value|title }}</span></td>
+          <td>
+            {% if r.ticket_code %}
+            <code style="font-size:11px;">{{ r.ticket_code }}</code>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if r.payment %}
+            <span class="status-badge status-{{ r.payment.status.value }}">{{ r.payment.status.value|title }}</span>
+            {% if r.payment.status.value == 'paid' %}
+            <div style="font-size:11px;color:var(--adm-text-muted);">₹{{ r.payment.amount }}</div>
+            {% endif %}
+            {% else %}
+            <span style="font-size:12px;color:var(--adm-text-muted);">Free / N/A</span>
+            {% endif %}
+          </td>
+          <td style="font-size:13px;">{{ r.created_at.strftime('%b %d, %Y') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty-row">No registrations yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

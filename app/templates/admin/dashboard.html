@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% block title %}Admin Dashboard — EventNet{% endblock %}
+{% block content %}
+<div class="admin-page-header">
+  <h1>📊 Dashboard</h1>
+  <p>Platform overview and analytics</p>
+</div>
+
+<!-- Stats -->
+<div class="admin-stats-grid">
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background:#e0f2fe">👥</div>
+    <div class="admin-stat-info">
+      <div class="admin-stat-value">{{ total_users }}</div>
+      <div class="admin-stat-label">Total Users</div>
+    </div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background:#fef3c7">🎓</div>
+    <div class="admin-stat-info">
+      <div class="admin-stat-value">{{ total_workshops }}</div>
+      <div class="admin-stat-label">Workshops</div>
+    </div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background:#ede9fe">📅</div>
+    <div class="admin-stat-info">
+      <div class="admin-stat-value">{{ total_meetings }}</div>
+      <div class="admin-stat-label">Meetings</div>
+    </div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background:#dcfce7">🎟</div>
+    <div class="admin-stat-info">
+      <div class="admin-stat-value">{{ total_registrations }}</div>
+      <div class="admin-stat-label">Registrations</div>
+    </div>
+  </div>
+  <div class="admin-stat-card admin-stat-card--wide">
+    <div class="admin-stat-icon" style="background:#fce7f3">💰</div>
+    <div class="admin-stat-info">
+      <div class="admin-stat-value">₹{{ "%.2f"|format(total_revenue) }}</div>
+      <div class="admin-stat-label">Total Revenue (Paid)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="admin-quick-actions">
+  <h2>Quick Actions</h2>
+  <div class="quick-action-grid">
+    <a href="{{ url_for('admin.create_workshop') }}" class="quick-action-btn">
+      <span>➕</span> New Workshop
+    </a>
+    <a href="{{ url_for('admin.create_meeting') }}" class="quick-action-btn">
+      <span>➕</span> New Meeting
+    </a>
+    <a href="{{ url_for('admin.users') }}" class="quick-action-btn">
+      <span>👥</span> Manage Users
+    </a>
+    <a href="{{ url_for('admin.registrations') }}" class="quick-action-btn">
+      <span>🎟</span> View Registrations
+    </a>
+  </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="admin-tables-grid">
+  <!-- Recent Registrations -->
+  <div class="admin-table-card">
+    <div class="admin-table-header">
+      <h2>Recent Registrations</h2>
+      <a href="{{ url_for('admin.registrations') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <table class="admin-data-table">
+      <thead>
+        <tr><th>User</th><th>Event</th><th>Type</th><th>Status</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for r in recent_registrations %}
+        <tr>
+          <td>{{ r.user.username if r.user else '—' }}</td>
+          <td>{{ r.event_title[:30] }}{% if r.event_title|length > 30 %}…{% endif %}</td>
+          <td><span class="type-badge type-{{ r.reg_type.value }}">{{ r.reg_type.value|title }}</span></td>
+          <td><span class="status-badge status-{{ r.status.value }}">{{ r.status.value|title }}</span></td>
+          <td>{{ r.created_at.strftime('%b %d') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty-row">No registrations yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Recent Payments -->
+  <div class="admin-table-card">
+    <div class="admin-table-header">
+      <h2>Recent Payments</h2>
+      <a href="{{ url_for('admin.payments') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <table class="admin-data-table">
+      <thead>
+        <tr><th>User</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for p in recent_payments %}
+        <tr>
+          <td>{{ p.user.username if p.user else '—' }}</td>
+          <td><strong>₹{{ p.amount }}</strong></td>
+          <td><span class="status-badge status-{{ p.status.value }}">{{ p.status.value|title }}</span></td>
+          <td>{{ p.created_at.strftime('%b %d') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="empty-row">No payments yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "user/base.html" %}
+{% block title %}Dashboard — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p class="page-subtitle">Your upcoming events and activity</p>
+</div>
+
+<!-- Stats Row -->
+<div class="stats-grid">
+  <div class="stat-card stat-card--blue">
+    <div class="stat-icon">🎟</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ registrations|length }}</div>
+      <div class="stat-label">Total Registrations</div>
+    </div>
+  </div>
+  <div class="stat-card stat-card--green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ registrations|selectattr('status.value', 'eq', 'confirmed')|list|length }}</div>
+      <div class="stat-label">Confirmed</div>
+    </div>
+  </div>
+  <div class="stat-card stat-card--orange">
+    <div class="stat-icon">⏳</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ upcoming|length }}</div>
+      <div class="stat-label">Upcoming</div>
+    </div>
+  </div>
+  <div class="stat-card stat-card--purple">
+    <div class="stat-icon">💳</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ recent_payments|length }}</div>
+      <div class="stat-label">Payments</div>
+    </div>
+  </div>
+</div>
+
+<!-- Browse Events -->
+<div class="section-grid">
+  <!-- Upcoming Workshops -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <h2>🎓 Upcoming Workshops</h2>
+      <a href="{{ url_for('user.workshops') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    {% if workshops %}
+      <div class="event-list">
+        {% for w in workshops %}
+        <div class="event-item">
+          <div class="event-item-body">
+            <div class="event-item-title">{{ w.title }}</div>
+            <div class="event-item-meta">
+              📅 {{ w.start_time.strftime('%b %d, %Y') }}
+              · 📍 {{ w.venue or 'TBD' }}
+            </div>
+          </div>
+          <div class="event-item-right">
+            <span class="price-badge {% if w.is_free %}price-free{% endif %}">
+              {{ 'Free' if w.is_free else '₹'+w.price|string }}
+            </span>
+            <a href="{{ url_for('user.workshop_detail', workshop_id=w.id) }}" class="btn btn-sm btn-primary">Register</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No upcoming workshops</div>
+    {% endif %}
+  </div>
+
+  <!-- Upcoming Meetings -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <h2>📅 Upcoming Meetings</h2>
+      <a href="{{ url_for('user.meetings') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    {% if meetings %}
+      <div class="event-list">
+        {% for m in meetings %}
+        <div class="event-item">
+          <div class="event-item-body">
+            <div class="event-item-title">{{ m.title }}</div>
+            <div class="event-item-meta">
+              📅 {{ m.start_time.strftime('%b %d, %Y') }}
+              · {% if m.is_virtual %}🌐 Virtual{% else %}📍 {{ m.venue or 'TBD' }}{% endif %}
+            </div>
+          </div>
+          <div class="event-item-right">
+            <span class="price-badge {% if m.is_free %}price-free{% endif %}">
+              {{ 'Free' if m.is_free else '₹'+m.price|string }}
+            </span>
+            <a href="{{ url_for('user.meeting_detail', meeting_id=m.id) }}" class="btn btn-sm btn-primary">Register</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No upcoming meetings</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recent Payments -->
+{% if recent_payments %}
+<div class="section-card mt-4">
+  <div class="section-card-header">
+    <h2>💳 Recent Payments</h2>
+    <a href="{{ url_for('user.payments') }}" class="btn btn-sm btn-outline">View All</a>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Invoice</th><th>Amount</th><th>Status</th><th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in recent_payments %}
+      <tr>
+        <td>{{ p.invoice_number or '—' }}</td>
+        <td>₹{{ p.amount }}</td>
+        <td><span class="status-badge status-{{ p.status.value }}">{{ p.status.value|title }}</span></td>
+        <td>{{ p.created_at.strftime('%b %d, %Y') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

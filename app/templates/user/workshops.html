@@ -1,0 +1,65 @@
+{% extends "user/base.html" %}
+{% block title %}Workshops — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🎓 Workshops</h1>
+  <p class="page-subtitle">Browse and register for workshops</p>
+</div>
+
+<div class="search-bar-wrapper">
+  <form method="GET" action="{{ url_for('user.workshops') }}">
+    <div class="search-bar">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search workshops…" class="form-control" />
+      <button type="submit" class="btn btn-primary">Search</button>
+      {% if q %}<a href="{{ url_for('user.workshops') }}" class="btn btn-outline">Clear</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="cards-grid">
+  {% for w in workshops %}
+  <div class="event-card">
+    {% if w.banner_url %}
+    <div class="event-card-img" style="background-image:url('{{ w.banner_url }}')"></div>
+    {% else %}
+    <div class="event-card-img event-card-img--placeholder">🎓</div>
+    {% endif %}
+    <div class="event-card-body">
+      <div class="event-card-meta">
+        <span class="status-badge status-{{ w.status.value }}">{{ w.status.value|title }}</span>
+        <span class="price-badge {% if w.is_free %}price-free{% endif %}">
+          {{ 'Free' if w.is_free else '₹'+w.price|string }}
+        </span>
+      </div>
+      <h3 class="event-card-title">{{ w.title }}</h3>
+      {% if w.description %}
+      <p class="event-card-desc">{{ w.description[:100] }}{% if w.description|length > 100 %}…{% endif %}</p>
+      {% endif %}
+      <div class="event-card-details">
+        <div>📅 {{ w.start_time.strftime('%b %d, %Y · %I:%M %p') }}</div>
+        {% if w.venue %}<div>📍 {{ w.venue }}</div>{% endif %}
+        {% if w.instructor_name %}<div>👨‍🏫 {{ w.instructor_name }}</div>{% endif %}
+        <div>💺 {{ w.available_seats }} / {{ w.capacity }} seats available</div>
+      </div>
+      {% if w.tags %}
+      <div class="tag-list">
+        {% for tag in w.tags.split(',') %}
+        <span class="tag">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="event-card-footer">
+      <a href="{{ url_for('user.workshop_detail', workshop_id=w.id) }}" class="btn btn-primary btn-full">
+        View & Register
+      </a>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state-full">
+    <div class="empty-icon">🎓</div>
+    <p>No workshops found{% if q %} for "{{ q }}"{% endif %}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

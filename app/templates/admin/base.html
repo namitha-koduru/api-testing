@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Admin — EventNet{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin/css/admin.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body class="admin-app">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">EventNet <span class="admin-badge">Admin</span></span>
+    </div>
+    <nav class="admin-sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="{{ url_for('admin.dashboard') }}"
+         class="admin-nav-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </a>
+
+      <div class="nav-section-label">Content</div>
+      <a href="{{ url_for('admin.workshops') }}"
+         class="admin-nav-item {% if 'workshop' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">🎓</span><span>Workshops</span>
+      </a>
+      <a href="{{ url_for('admin.meetings') }}"
+         class="admin-nav-item {% if 'meeting' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">📅</span><span>Meetings</span>
+      </a>
+
+      <div class="nav-section-label">Management</div>
+      <a href="{{ url_for('admin.users') }}"
+         class="admin-nav-item {% if request.endpoint == 'admin.users' %}active{% endif %}">
+        <span class="nav-icon">👥</span><span>Users</span>
+      </a>
+      <a href="{{ url_for('admin.registrations') }}"
+         class="admin-nav-item {% if request.endpoint == 'admin.registrations' %}active{% endif %}">
+        <span class="nav-icon">🎟</span><span>Registrations</span>
+      </a>
+      <a href="{{ url_for('admin.payments') }}"
+         class="admin-nav-item {% if request.endpoint == 'admin.payments' %}active{% endif %}">
+        <span class="nav-icon">💳</span><span>Payments</span>
+      </a>
+    </nav>
+    <div class="admin-sidebar-footer">
+      <a href="{{ url_for('auth.logout') }}" class="admin-nav-item admin-logout">
+        <span class="nav-icon">🚪</span><span>Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()">☰</button>
+      <div class="admin-topbar-right">
+        <span class="admin-user-badge">🛡 {{ current_user.username }}</span>
+      </div>
+    </header>
+
+    <div class="admin-flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="admin-alert admin-alert-{{ category }}">
+            {{ message }}
+            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+          </div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <main class="admin-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='admin/js/admin.js') }}"></script>
+  {% block scripts %}{% endblock %}
+
+  <script>
+    function toggleAdminSidebar() {
+      document.getElementById('adminSidebar').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

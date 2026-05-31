@@ -1,0 +1,271 @@
+{% extends "user/base.html" %}
+{% block title %}{{ meeting.title }} — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <a href="{{ url_for('user.meetings') }}" class="back-link">← Back to Meetings</a>
+</div>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    {% if meeting.banner_url %}
+    <div class="detail-banner" style="background-image:url('{{ meeting.banner_url }}')"></div>
+    {% endif %}
+
+    <div class="detail-card">
+      <div class="detail-badges">
+        <span class="status-badge status-{{ meeting.status.value }}">{{ meeting.status.value|title }}</span>
+        {% if meeting.is_virtual %}<span class="virtual-badge">🌐 Virtual</span>{% endif %}
+        <span class="price-badge {% if meeting.is_free %}price-free{% endif %}">
+          {{ 'Free' if meeting.is_free else '₹'+meeting.price|string }}
+        </span>
+      </div>
+      <h1 class="detail-title">{{ meeting.title }}</h1>
+
+      <div class="detail-meta-grid">
+        <div class="detail-meta-item">
+          <span class="meta-icon">📅</span>
+          <div>
+            <div class="meta-label">Date & Time</div>
+            <div class="meta-value">{{ meeting.start_time.strftime('%B %d, %Y') }}</div>
+            <div class="meta-sub">{{ meeting.start_time.strftime('%I:%M %p') }} – {{ meeting.end_time.strftime('%I:%M %p') }}</div>
+          </div>
+        </div>
+        <div class="detail-meta-item">
+          <span class="meta-icon">{% if meeting.is_virtual %}🌐{% else %}📍{% endif %}</span>
+          <div>
+            <div class="meta-label">{% if meeting.is_virtual %}Format{% else %}Venue{% endif %}</div>
+            <div class="meta-value">{% if meeting.is_virtual %}Online / Virtual{% else %}{{ meeting.venue or 'TBD' }}{% endif %}</div>
+          </div>
+        </div>
+        {% if meeting.organizer_name %}
+        <div class="detail-meta-item">
+          <span class="meta-icon">🎤</span>
+          <div>
+            <div class="meta-label">Organizer</div>
+            <div class="meta-value">{{ meeting.organizer_name }}</div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="detail-meta-item">
+          <span class="meta-icon">💺</span>
+          <div>
+            <div class="meta-label">Availability</div>
+            <div class="meta-value">{{ meeting.available_seats }} / {{ meeting.capacity }} seats</div>
+          </div>
+        </div>
+      </div>
+
+      {% if meeting.description %}
+      <div class="detail-section">
+        <h2>About this Meeting</h2>
+        <p>{{ meeting.description }}</p>
+      </div>
+      {% endif %}
+
+      {% if meeting.agenda %}
+      <div class="detail-section">
+        <h2>Agenda</h2>
+        <div class="agenda-text">{{ meeting.agenda }}</div>
+      </div>
+      {% endif %}
+
+      {% if meeting.tags %}
+      <div class="tag-list">
+        {% for tag in meeting.tags.split(',') %}
+        <span class="tag">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Registration Card -->
+  <div class="detail-sidebar">
+    <div class="register-card">
+      <h2>Register for this Meeting</h2>
+      {% if existing_reg %}
+        <div class="register-status">
+          <div class="status-icon">
+            {% if existing_reg.status.value == 'confirmed' %}✅{% else %}⏳{% endif %}
+          </div>
+          <div class="status-text">
+            {% if existing_reg.status.value == 'confirmed' %}
+              <strong>You're registered!</strong>
+              {% if existing_reg.ticket_code %}
+              <p>Ticket: <code>{{ existing_reg.ticket_code }}</code></p>
+              {% endif %}
+              {% if meeting.is_virtual and meeting.meeting_link %}
+              <a href="{{ meeting.meeting_link }}" target="_blank" class="btn btn-primary btn-full mt-2">
+                🌐 Join Meeting
+              </a>
+              {% endif %}
+            {% elif existing_reg.status.value == 'cancelled' %}
+              <strong>Registration cancelled</strong>
+            {% else %}
+              <strong>Registration pending</strong>
+              <p>Complete payment to confirm your spot.</p>
+            {% endif %}
+          </div>
+        </div>
+        {% if existing_reg.status.value == 'pending' and not meeting.is_free %}
+        <button class="btn btn-primary btn-full mt-3" id="payNowBtn"
+          data-registration-id="{{ existing_reg.id }}"
+          data-amount="{{ meeting.price }}"
+          data-title="{{ meeting.title }}">
+          Pay ₹{{ meeting.price }} Now
+        </button>
+        {% endif %}
+      {% elif meeting.available_seats <= 0 %}
+        <div class="alert alert-danger">This meeting is fully booked.</div>
+      {% elif meeting.status.value == 'cancelled' %}
+        <div class="alert alert-danger">This meeting has been cancelled.</div>
+      {% else %}
+        <div class="price-summary">
+          <div class="price-row">
+            <span>Registration Fee</span>
+            <span>{{ 'Free' if meeting.is_free else '₹'+meeting.price|string }}</span>
+          </div>
+          {% if not meeting.is_free %}
+          <div class="price-row price-total">
+            <span>Total</span>
+            <span>₹{{ meeting.price }}</span>
+          </div>
+          {% endif %}
+        </div>
+        <button class="btn btn-primary btn-full" id="registerBtn"
+          data-meeting-id="{{ meeting.id }}"
+          data-amount="{{ meeting.price }}"
+          data-title="{{ meeting.title }}"
+          data-is-free="{{ 'true' if meeting.is_free else 'false' }}">
+          {% if meeting.is_free %}Register for Free{% else %}Register & Pay ₹{{ meeting.price }}{% endif %}
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+{% endblock %}
+
+{% block scripts %}
+{% if not existing_reg or existing_reg.status.value == 'pending' %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const RAZORPAY_KEY = "{{ config.get('RAZORPAY_KEY_ID', '') }}";
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 4000);
+}
+
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  });
+  return res.json();
+}
+
+function launchRazorpay(orderId, amount, title, registrationId) {
+  const options = {
+    key: RAZORPAY_KEY,
+    amount: amount * 100,
+    currency: 'INR',
+    name: 'EventNet',
+    description: title,
+    order_id: orderId,
+    handler: async function(response) {
+      showToast('Verifying payment…', 'info');
+      const data = await apiPost('/api/payments/verify', {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+      });
+      if (data.registration_id) {
+        showToast('Payment successful! Redirecting…', 'success');
+        setTimeout(() => {
+          window.location.href = '/dashboard/payment/success?registration_id=' + data.registration_id;
+        }, 1500);
+      } else {
+        showToast(data.message || 'Verification failed', 'error');
+      }
+    },
+    modal: {
+      ondismiss: async function() {
+        showToast('Payment cancelled', 'error');
+      }
+    },
+    prefill: {
+      name: '{{ current_user.full_name }}',
+      email: '{{ current_user.email }}',
+    },
+    theme: { color: '#6366f1' },
+  };
+  const rzp = new Razorpay(options);
+  rzp.open();
+}
+
+const registerBtn = document.getElementById('registerBtn');
+if (registerBtn) {
+  registerBtn.addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = 'Processing…';
+    const meetingId = this.dataset.meetingId;
+    const amount = parseFloat(this.dataset.amount);
+    const title = this.dataset.title;
+    const isFree = this.dataset.isFree === 'true';
+
+    try {
+      const regData = await apiPost(`/api/meetings/${meetingId}/register`, {});
+      if (regData.message && !regData.registration) {
+        showToast(regData.message, 'error');
+        this.disabled = false;
+        this.textContent = isFree ? 'Register for Free' : `Register & Pay ₹${amount}`;
+        return;
+      }
+
+      const registrationId = regData.registration.id;
+
+      if (isFree || regData.requires_payment === false) {
+        showToast('Registered successfully!', 'success');
+        setTimeout(() => window.location.href = '/dashboard/payment/success?registration_id=' + registrationId, 1500);
+        return;
+      }
+
+      const orderData = await apiPost('/api/payments/create-order', {
+        registration_id: registrationId,
+        amount: amount,
+        currency: 'INR',
+      });
+
+      if (orderData.free) {
+        showToast('Registered successfully!', 'success');
+        setTimeout(() => window.location.href = '/dashboard/payment/success?registration_id=' + registrationId, 1500);
+        return;
+      }
+
+      if (!orderData.order_id) {
+        showToast(orderData.message || 'Failed to create order', 'error');
+        this.disabled = false;
+        this.textContent = `Register & Pay ₹${amount}`;
+        return;
+      }
+
+      launchRazorpay(orderData.order_id, amount, title, registrationId);
+      this.disabled = false;
+      this.textContent = `Register & Pay ₹${amount}`;
+    } catch(err) {
+      showToast('An error occurred. Please try again.', 'error');
+      this.disabled = false;
+      this.textContent = isFree ? 'Register for Free' : `Register & Pay ₹${amount}`;
+    }
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

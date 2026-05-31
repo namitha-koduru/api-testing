@@ -1,0 +1,66 @@
+{% extends "user/base.html" %}
+{% block title %}My Registrations — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🎟 My Registrations</h1>
+  <p class="page-subtitle">All your event registrations</p>
+</div>
+
+{% if registrations %}
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Event</th>
+        <th>Type</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Ticket</th>
+        <th>Registered On</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for reg in registrations %}
+      <tr>
+        <td>{{ reg.id }}</td>
+        <td>
+          {% if reg.workshop %}
+          <a href="{{ url_for('user.workshop_detail', workshop_id=reg.workshop_id) }}">{{ reg.workshop.title }}</a>
+          {% elif reg.meeting %}
+          <a href="{{ url_for('user.meeting_detail', meeting_id=reg.meeting_id) }}">{{ reg.meeting.title }}</a>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="type-badge type-{{ reg.reg_type.value }}">
+            {% if reg.reg_type.value == 'workshop' %}🎓{% else %}📅{% endif %}
+            {{ reg.reg_type.value|title }}
+          </span>
+        </td>
+        <td>
+          {% if reg.event_start_time %}
+            {{ reg.event_start_time.strftime('%b %d, %Y') }}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="status-badge status-{{ reg.status.value }}">{{ reg.status.value|title }}</span>
+        </td>
+        <td>
+          {% if reg.ticket_code %}
+            <code class="ticket-code">{{ reg.ticket_code }}</code>
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ reg.created_at.strftime('%b %d, %Y') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state-full">
+  <div class="empty-icon">🎟</div>
+  <p>No registrations yet</p>
+  <a href="{{ url_for('user.workshops') }}" class="btn btn-primary">Browse Workshops</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env.local
+
+# Flask / SQLite
+instance/
+*.db
+*.sqlite3
+uploads/
+
+# Environment files – NEVER commit real secrets
+.env
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Migrations (keep if using Flask-Migrate)
+# migrations/
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+*.override.yml

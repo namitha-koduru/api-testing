@@ -1,0 +1,70 @@
+{% extends "user/base.html" %}
+{% block title %}Meetings — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📅 Meetings & Events</h1>
+  <p class="page-subtitle">Browse and register for meetings</p>
+</div>
+
+<div class="search-bar-wrapper">
+  <form method="GET" action="{{ url_for('user.meetings') }}">
+    <div class="search-bar">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search meetings…" class="form-control" />
+      <button type="submit" class="btn btn-primary">Search</button>
+      {% if q %}<a href="{{ url_for('user.meetings') }}" class="btn btn-outline">Clear</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="cards-grid">
+  {% for m in meetings %}
+  <div class="event-card">
+    {% if m.banner_url %}
+    <div class="event-card-img" style="background-image:url('{{ m.banner_url }}')"></div>
+    {% else %}
+    <div class="event-card-img event-card-img--placeholder">📅</div>
+    {% endif %}
+    <div class="event-card-body">
+      <div class="event-card-meta">
+        <span class="status-badge status-{{ m.status.value }}">{{ m.status.value|title }}</span>
+        {% if m.is_virtual %}<span class="virtual-badge">🌐 Virtual</span>{% endif %}
+        <span class="price-badge {% if m.is_free %}price-free{% endif %}">
+          {{ 'Free' if m.is_free else '₹'+m.price|string }}
+        </span>
+      </div>
+      <h3 class="event-card-title">{{ m.title }}</h3>
+      {% if m.description %}
+      <p class="event-card-desc">{{ m.description[:100] }}{% if m.description|length > 100 %}…{% endif %}</p>
+      {% endif %}
+      <div class="event-card-details">
+        <div>📅 {{ m.start_time.strftime('%b %d, %Y · %I:%M %p') }}</div>
+        {% if m.is_virtual %}
+          <div>🌐 Online Meeting</div>
+        {% elif m.venue %}
+          <div>📍 {{ m.venue }}</div>
+        {% endif %}
+        {% if m.organizer_name %}<div>🎤 {{ m.organizer_name }}</div>{% endif %}
+        <div>💺 {{ m.available_seats }} / {{ m.capacity }} seats available</div>
+      </div>
+      {% if m.tags %}
+      <div class="tag-list">
+        {% for tag in m.tags.split(',') %}
+        <span class="tag">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="event-card-footer">
+      <a href="{{ url_for('user.meeting_detail', meeting_id=m.id) }}" class="btn btn-primary btn-full">
+        View & Register
+      </a>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state-full">
+    <div class="empty-icon">📅</div>
+    <p>No meetings found{% if q %} for "{{ q }}"{% endif %}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

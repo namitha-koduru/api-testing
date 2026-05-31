@@ -1,0 +1,42 @@
+{% extends "user/base.html" %}
+{% block title %}Payment History — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>💳 Payment History</h1>
+  <p class="page-subtitle">All your transactions</p>
+</div>
+
+{% if payments %}
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Invoice</th>
+        <th>Amount</th>
+        <th>Currency</th>
+        <th>Status</th>
+        <th>Order ID</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td>{{ p.invoice_number or '—' }}</td>
+        <td><strong>₹{{ p.amount }}</strong></td>
+        <td>{{ p.currency }}</td>
+        <td><span class="status-badge status-{{ p.status.value }}">{{ p.status.value|title }}</span></td>
+        <td><code class="small-code">{{ p.razorpay_order_id or '—' }}</code></td>
+        <td>{{ p.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state-full">
+  <div class="empty-icon">💳</div>
+  <p>No payments yet</p>
+</div>
+{% endif %}
+{% endblock %}

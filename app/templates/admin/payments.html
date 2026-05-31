@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+{% block title %}Payments — Admin{% endblock %}
+{% block content %}
+<div class="admin-page-header">
+  <div>
+    <h1>💳 Payments</h1>
+    <p>All transactions processed via Razorpay</p>
+  </div>
+</div>
+
+<!-- Revenue Summary -->
+{% set paid_payments = payments|selectattr('status.value','eq','paid')|list %}
+{% set total_rev = paid_payments|map(attribute='amount')|map('float')|sum %}
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+  <div style="background:#fff;border-radius:10px;padding:16px 24px;box-shadow:var(--adm-shadow);">
+    <div style="font-size:24px;font-weight:700;color:#166534;">₹{{ "%.2f"|format(total_rev) }}</div>
+    <div style="font-size:13px;color:var(--adm-text-muted);">Total Revenue (Paid)</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:16px 24px;box-shadow:var(--adm-shadow);">
+    <div style="font-size:24px;font-weight:700;color:#0f172a;">{{ paid_payments|length }}</div>
+    <div style="font-size:13px;color:var(--adm-text-muted);">Successful Payments</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:16px 24px;box-shadow:var(--adm-shadow);">
+    <div style="font-size:24px;font-weight:700;color:#991b1b;">{{ payments|selectattr('status.value','eq','failed')|list|length }}</div>
+    <div style="font-size:13px;color:var(--adm-text-muted);">Failed Payments</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:16px 24px;box-shadow:var(--adm-shadow);">
+    <div style="font-size:24px;font-weight:700;color:#92400e;">{{ payments|selectattr('status.value','eq','created')|list|length }}</div>
+    <div style="font-size:13px;color:var(--adm-text-muted);">Pending / Created</div>
+  </div>
+</div>
+
+<div class="admin-full-table-card">
+  <div class="admin-full-table-header">
+    <h2>All Payments ({{ payments|length }})</h2>
+    <input type="text" id="adminTableSearch" placeholder="Search by invoice, order ID…"
+           style="padding:7px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;width:240px;outline:none;">
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="admin-data-table" id="adminTable">
+      <thead>
+        <tr>
+          <th>#</th><th>User</th><th>Invoice</th><th>Amount</th>
+          <th>Status</th><th>Order ID</th><th>Payment ID</th><th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>
+            {% if p.user %}
+            <div><strong>{{ p.user.full_name }}</strong></div>
+            <div style="font-size:12px;color:var(--adm-text-muted);">{{ p.user.email }}</div>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if p.invoice_number %}
+            <code>{{ p.invoice_number }}</code>
+            {% else %}—{% endif %}
+          </td>
+          <td><strong>₹{{ p.amount }}</strong></td>
+          <td><span class="status-badge status-{{ p.status.value }}">{{ p.status.value|title }}</span></td>
+          <td><code style="font-size:11px;">{{ p.razorpay_order_id or '—' }}</code></td>
+          <td><code style="font-size:11px;">{{ p.razorpay_payment_id or '—' }}</code></td>
+          <td style="font-size:13px;">{{ p.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty-row">No payments yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

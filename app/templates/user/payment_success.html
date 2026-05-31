@@ -1,0 +1,25 @@
+{% extends "user/base.html" %}
+{% block title %}Payment Successful — EventNet{% endblock %}
+{% block content %}
+<div class="result-page">
+  <div class="result-card result-card--success">
+    <div class="result-icon">✅</div>
+    <h1>Payment Successful!</h1>
+    {% if registration %}
+      <p>You are successfully registered for <strong>{{ registration.event_title }}</strong>.</p>
+      {% if registration.ticket_code %}
+      <div class="ticket-display">
+        <div class="ticket-label">Your Ticket Code</div>
+        <div class="ticket-value">{{ registration.ticket_code }}</div>
+      </div>
+      {% endif %}
+    {% else %}
+      <p>Your registration has been confirmed.</p>
+    {% endif %}
+    <div class="result-actions">
+      <a href="{{ url_for('user.registrations') }}" class="btn btn-primary">View Registrations</a>
+      <a href="{{ url_for('user.dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends "user/base.html" %}
+{% block title %}{{ workshop.title }} — EventNet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <a href="{{ url_for('user.workshops') }}" class="back-link">← Back to Workshops</a>
+</div>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    {% if workshop.banner_url %}
+    <div class="detail-banner" style="background-image:url('{{ workshop.banner_url }}')"></div>
+    {% endif %}
+
+    <div class="detail-card">
+      <div class="detail-badges">
+        <span class="status-badge status-{{ workshop.status.value }}">{{ workshop.status.value|title }}</span>
+        <span class="price-badge {% if workshop.is_free %}price-free{% endif %}">
+          {{ 'Free' if workshop.is_free else '₹'+workshop.price|string }}
+        </span>
+      </div>
+      <h1 class="detail-title">{{ workshop.title }}</h1>
+
+      <div class="detail-meta-grid">
+        <div class="detail-meta-item">
+          <span class="meta-icon">📅</span>
+          <div>
+            <div class="meta-label">Date & Time</div>
+            <div class="meta-value">{{ workshop.start_time.strftime('%B %d, %Y') }}</div>
+            <div class="meta-sub">{{ workshop.start_time.strftime('%I:%M %p') }} – {{ workshop.end_time.strftime('%I:%M %p') }}</div>
+          </div>
+        </div>
+        {% if workshop.venue %}
+        <div class="detail-meta-item">
+          <span class="meta-icon">📍</span>
+          <div>
+            <div class="meta-label">Venue</div>
+            <div class="meta-value">{{ workshop.venue }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if workshop.instructor_name %}
+        <div class="detail-meta-item">
+          <span class="meta-icon">👨‍🏫</span>
+          <div>
+            <div class="meta-label">Instructor</div>
+            <div class="meta-value">{{ workshop.instructor_name }}</div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="detail-meta-item">
+          <span class="meta-icon">💺</span>
+          <div>
+            <div class="meta-label">Availability</div>
+            <div class="meta-value">{{ workshop.available_seats }} / {{ workshop.capacity }} seats</div>
+          </div>
+        </div>
+      </div>
+
+      {% if workshop.description %}
+      <div class="detail-section">
+        <h2>About this Workshop</h2>
+        <p>{{ workshop.description }}</p>
+      </div>
+      {% endif %}
+
+      {% if workshop.instructor_bio %}
+      <div class="detail-section">
+        <h2>About the Instructor</h2>
+        <p>{{ workshop.instructor_bio }}</p>
+      </div>
+      {% endif %}
+
+      {% if workshop.tags %}
+      <div class="tag-list">
+        {% for tag in workshop.tags.split(',') %}
+        <span class="tag">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Registration Card -->
+  <div class="detail-sidebar">
+    <div class="register-card">
+      <h2>Register for this Workshop</h2>
+      {% if existing_reg %}
+        <div class="register-status">
+          <div class="status-icon">
+            {% if existing_reg.status.value == 'confirmed' %}✅{% else %}⏳{% endif %}
+          </div>
+          <div class="status-text">
+            {% if existing_reg.status.value == 'confirmed' %}
+              <strong>You're registered!</strong>
+              {% if existing_reg.ticket_code %}
+              <p>Ticket: <code>{{ existing_reg.ticket_code }}</code></p>
+              {% endif %}
+            {% elif existing_reg.status.value == 'cancelled' %}
+              <strong>Registration cancelled</strong>
+            {% else %}
+              <strong>Registration pending</strong>
+              <p>Complete payment to confirm your spot.</p>
+            {% endif %}
+          </div>
+        </div>
+        {% if existing_reg.status.value == 'pending' and not workshop.is_free %}
+        <button class="btn btn-primary btn-full mt-3" id="payNowBtn"
+          data-registration-id="{{ existing_reg.id }}"
+          data-amount="{{ workshop.price }}"
+          data-title="{{ workshop.title }}">
+          Pay ₹{{ workshop.price }} Now
+        </button>
+        {% endif %}
+      {% elif workshop.available_seats <= 0 %}
+        <div class="alert alert-danger">This workshop is fully booked.</div>
+      {% elif workshop.status.value == 'cancelled' %}
+        <div class="alert alert-danger">This workshop has been cancelled.</div>
+      {% else %}
+        <div class="price-summary">
+          <div class="price-row">
+            <span>Registration Fee</span>
+            <span>{{ 'Free' if workshop.is_free else '₹'+workshop.price|string }}</span>
+          </div>
+          {% if not workshop.is_free %}
+          <div class="price-row price-total">
+            <span>Total</span>
+            <span>₹{{ workshop.price }}</span>
+          </div>
+          {% endif %}
+        </div>
+        <button class="btn btn-primary btn-full" id="registerBtn"
+          data-workshop-id="{{ workshop.id }}"
+          data-amount="{{ workshop.price }}"
+          data-title="{{ workshop.title }}"
+          data-is-free="{{ 'true' if workshop.is_free else 'false' }}">
+          {% if workshop.is_free %}Register for Free{% else %}Register & Pay ₹{{ workshop.price }}{% endif %}
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+{% endblock %}
+
+{% block scripts %}
+{% if not existing_reg or existing_reg.status.value == 'pending' %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const RAZORPAY_KEY = "{{ config.get('RAZORPAY_KEY_ID', '') }}";
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 4000);
+}
+
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  });
+  return res.json();
+}
+
+function launchRazorpay(orderId, amount, title, registrationId) {
+  const options = {
+    key: RAZORPAY_KEY,
+    amount: amount * 100,
+    currency: 'INR',
+    name: 'EventNet',
+    description: title,
+    order_id: orderId,
+    handler: async function(response) {
+      showToast('Verifying payment…', 'info');
+      const data = await apiPost('/api/payments/verify', {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+      });
+      if (data.registration_id) {
+        showToast('Payment successful! Redirecting…', 'success');
+        setTimeout(() => {
+          window.location.href = '/dashboard/payment/success?registration_id=' + data.registration_id;
+        }, 1500);
+      } else {
+        showToast(data.message || 'Verification failed', 'error');
+      }
+    },
+    modal: {
+      ondismiss: async function() {
+        if (orderId) {
+          await apiPost('/api/payments/failed', {
+            razorpay_order_id: orderId,
+            reason: 'User dismissed payment modal',
+          });
+        }
+        showToast('Payment cancelled', 'error');
+      }
+    },
+    prefill: {
+      name: '{{ current_user.full_name }}',
+      email: '{{ current_user.email }}',
+    },
+    theme: { color: '#6366f1' },
+  };
+  const rzp = new Razorpay(options);
+  rzp.on('payment.failed', async function(resp) {
+    await apiPost('/api/payments/failed', {
+      razorpay_order_id: resp.error.metadata.order_id,
+      reason: resp.error.description,
+    });
+    showToast('Payment failed: ' + resp.error.description, 'error');
+  });
+  rzp.open();
+}
+
+// Register button
+const registerBtn = document.getElementById('registerBtn');
+if (registerBtn) {
+  registerBtn.addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = 'Processing…';
+    const workshopId = this.dataset.workshopId;
+    const amount = parseFloat(this.dataset.amount);
+    const title = this.dataset.title;
+    const isFree = this.dataset.isFree === 'true';
+
+    try {
+      // Step 1: Create registration
+      const regData = await apiPost(`/api/workshops/${workshopId}/register`, {});
+      if (regData.message && !regData.registration) {
+        showToast(regData.message, 'error');
+        this.disabled = false;
+        this.textContent = isFree ? 'Register for Free' : `Register & Pay ₹${amount}`;
+        return;
+      }
+
+      const registrationId = regData.registration.id;
+
+      if (isFree || regData.requires_payment === false) {
+        showToast('Registered successfully!', 'success');
+        setTimeout(() => window.location.href = '/dashboard/payment/success?registration_id=' + registrationId, 1500);
+        return;
+      }
+
+      // Step 2: Create Razorpay order
+      const orderData = await apiPost('/api/payments/create-order', {
+        registration_id: registrationId,
+        amount: amount,
+        currency: 'INR',
+      });
+
+      if (orderData.free) {
+        showToast('Registered successfully!', 'success');
+        setTimeout(() => window.location.href = '/dashboard/payment/success?registration_id=' + registrationId, 1500);
+        return;
+      }
+
+      if (!orderData.order_id) {
+        showToast(orderData.message || 'Failed to create order', 'error');
+        this.disabled = false;
+        this.textContent = `Register & Pay ₹${amount}`;
+        return;
+      }
+
+      launchRazorpay(orderData.order_id, amount, title, registrationId);
+      this.disabled = false;
+      this.textContent = `Register & Pay ₹${amount}`;
+    } catch(err) {
+      showToast('An error occurred. Please try again.', 'error');
+      this.disabled = false;
+      this.textContent = isFree ? 'Register for Free' : `Register & Pay ₹${amount}`;
+    }
+  });
+}
+
+// Pay Now button (pending registrations)
+const payNowBtn = document.getElementById('payNowBtn');
+if (payNowBtn) {
+  payNowBtn.addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = 'Processing…';
+    const registrationId = this.dataset.registrationId;
+    const amount = parseFloat(this.dataset.amount);
+    const title = this.dataset.title;
+
+    try {
+      const orderData = await apiPost('/api/payments/create-order', {
+        registration_id: registrationId,
+        amount: amount,
+        currency: 'INR',
+      });
+
+      if (!orderData.order_id) {
+        showToast(orderData.message || 'Failed to create order', 'error');
+        this.disabled = false;
+        this.textContent = `Pay ₹${amount} Now`;
+        return;
+      }
+
+      launchRazorpay(orderData.order_id, amount, title, registrationId);
+      this.disabled = false;
+      this.textContent = `Pay ₹${amount} Now`;
+    } catch(err) {
+      showToast('An error occurred. Please try again.', 'error');
+      this.disabled = false;
+      this.textContent = `Pay ₹${amount} Now`;
+    }
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

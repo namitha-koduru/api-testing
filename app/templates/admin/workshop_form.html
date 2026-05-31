@@ -1,0 +1,118 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if workshop else 'Create' }} Workshop — Admin{% endblock %}
+{% block content %}
+<div class="admin-page-header">
+  <div>
+    <a href="{{ url_for('admin.workshops') }}" class="back-link">← Back to Workshops</a>
+    <h1 style="margin-top:8px;">{{ '✏ Edit Workshop' if workshop else '➕ New Workshop' }}</h1>
+  </div>
+</div>
+
+<div class="admin-form-card">
+  <form method="POST" id="workshopForm">
+
+    <div class="adm-form-group">
+      <label for="title">Workshop Title <span class="required">*</span></label>
+      <input type="text" id="title" name="title" class="adm-form-control"
+             value="{{ workshop.title if workshop else '' }}" required
+             placeholder="e.g. Advanced Python for Data Science" />
+    </div>
+
+    <div class="adm-form-group">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" class="adm-form-control" rows="4"
+                placeholder="What will attendees learn?">{{ workshop.description if workshop else '' }}</textarea>
+    </div>
+
+    <div class="adm-form-row">
+      <div class="adm-form-group">
+        <label for="instructor_name">Instructor Name</label>
+        <input type="text" id="instructor_name" name="instructor_name" class="adm-form-control"
+               value="{{ workshop.instructor_name if workshop else '' }}"
+               placeholder="Dr. Jane Smith" />
+      </div>
+      <div class="adm-form-group">
+        <label for="venue">Venue / Location</label>
+        <input type="text" id="venue" name="venue" class="adm-form-control"
+               value="{{ workshop.venue if workshop else '' }}"
+               placeholder="Conference Hall A / Online" />
+      </div>
+    </div>
+
+    <div class="adm-form-group">
+      <label for="instructor_bio">Instructor Bio</label>
+      <textarea id="instructor_bio" name="instructor_bio" class="adm-form-control" rows="3"
+                placeholder="Brief bio of the instructor">{{ workshop.instructor_bio if workshop else '' }}</textarea>
+    </div>
+
+    <div class="adm-form-row">
+      <div class="adm-form-group">
+        <label for="start_time">Start Date & Time <span class="required">*</span></label>
+        <input type="datetime-local" id="start_time" name="start_time" class="adm-form-control"
+               value="{{ workshop.start_time.strftime('%Y-%m-%dT%H:%M') if workshop else '' }}" required />
+      </div>
+      <div class="adm-form-group">
+        <label for="end_time">End Date & Time <span class="required">*</span></label>
+        <input type="datetime-local" id="end_time" name="end_time" class="adm-form-control"
+               value="{{ workshop.end_time.strftime('%Y-%m-%dT%H:%M') if workshop else '' }}" required />
+      </div>
+    </div>
+
+    <div class="adm-form-row">
+      <div class="adm-form-group">
+        <label for="capacity">Capacity (seats)</label>
+        <input type="number" id="capacity" name="capacity" class="adm-form-control"
+               value="{{ workshop.capacity if workshop else '50' }}" min="1" placeholder="50" />
+      </div>
+      <div class="adm-form-group">
+        <label for="price">Price (₹) — leave 0 for Free</label>
+        <input type="number" id="price" name="price" class="adm-form-control"
+               value="{{ workshop.price if workshop else '0' }}" min="0" step="0.01" placeholder="0.00" />
+        <p class="field-hint">Set to 0 to make this workshop free</p>
+      </div>
+    </div>
+
+    <div class="adm-form-row">
+      <div class="adm-form-group">
+        <label for="tags">Tags (comma-separated)</label>
+        <input type="text" id="tags" name="tags" class="adm-form-control"
+               value="{{ workshop.tags if workshop else '' }}"
+               placeholder="Python, Data Science, Beginner" />
+      </div>
+      {% if workshop %}
+      <div class="adm-form-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="adm-form-control">
+          {% for s in ['upcoming','ongoing','completed','cancelled'] %}
+          <option value="{{ s }}" {{ 'selected' if workshop.status.value == s else '' }}>
+            {{ s|title }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="adm-form-actions">
+      <button type="submit" class="btn btn-primary">
+        {{ '💾 Save Changes' if workshop else '✅ Create Workshop' }}
+      </button>
+      <a href="{{ url_for('admin.workshops') }}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Validate end > start
+document.getElementById('workshopForm').addEventListener('submit', function(e) {
+  const s = document.getElementById('start_time').value;
+  const en = document.getElementById('end_time').value;
+  if (s && en && en <= s) {
+    e.preventDefault();
+    alert('End time must be after start time.');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% block title %}Users — Admin{% endblock %}
+{% block content %}
+<div class="admin-page-header">
+  <div>
+    <h1>👥 Users</h1>
+    <p>Manage registered users</p>
+  </div>
+  <span style="font-size:14px;color:var(--adm-text-muted);">{{ users|length }} total users</span>
+</div>
+
+<div class="admin-full-table-card">
+  <div class="admin-full-table-header">
+    <h2>All Users</h2>
+    <input type="text" id="adminTableSearch" placeholder="Search by name, email, username…"
+           style="padding:7px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;width:260px;outline:none;">
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="admin-data-table" id="adminTable">
+      <thead>
+        <tr>
+          <th>#</th><th>Name</th><th>Email</th><th>Username</th>
+          <th>Role</th><th>Status</th><th>Joined</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td><strong>{{ u.full_name }}</strong></td>
+          <td>{{ u.email }}</td>
+          <td>
+            <code>{{ u.username }}</code>
+          </td>
+          <td>
+            {% if u.role.value == 'admin' %}
+              <span style="background:#ede9fe;color:#6d28d9;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;">🛡 Admin</span>
+            {% else %}
+              <span style="background:#f1f5f9;color:#475569;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;">User</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge {{ 'status-confirmed' if u.is_active else 'status-cancelled' }}">
+              {{ 'Active' if u.is_active else 'Inactive' }}
+            </span>
+          </td>
+          <td>{{ u.created_at.strftime('%b %d, %Y') if u.created_at else '—' }}</td>
+          <td>
+            {% if u.role.value != 'admin' %}
+            <form method="POST" action="{{ url_for('admin.toggle_user', user_id=u.id) }}"
+                  data-confirm="{{ 'Deactivate' if u.is_active else 'Activate' }} user {{ u.username }}?"
+                  style="margin:0;">
+              <button type="submit"
+                      class="btn btn-sm {{ 'btn-warning' if u.is_active else 'btn-success' }}">
+                {{ '🔒 Deactivate' if u.is_active else '🔓 Activate' }}
+              </button>
+            </form>
+            {% else %}
+            <span style="font-size:12px;color:var(--adm-text-muted);">Protected</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty-row">No users found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

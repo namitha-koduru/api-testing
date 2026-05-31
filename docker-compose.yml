@@ -1,74 +1,38 @@
 version: "3.9"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: eventnet
-      POSTGRES_PASSWORD: eventnet
-      POSTGRES_DB: eventnet
+  eventnet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eventnet_app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eventnet"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  backend:
-    build: ./backend
-    ports:
-      - "5000:5000"
+      # SQLite database persistence – survives container restarts
+      - eventnet_db:/app/instance
+      # Upload files persistence
+      - eventnet_uploads:/app/uploads
     environment:
-      FLASK_ENV: development
-      DATABASE_URL: postgresql://eventnet:eventnet@postgres:5432/eventnet
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: dev-secret-change-in-production
-      JWT_SECRET_KEY: jwt-dev-secret
-      CORS_ORIGINS: http://localhost:5173,http://localhost:80
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      FLASK_ENV: ${FLASK_ENV:-production}
+      SECRET_KEY: ${SECRET_KEY:-change-me-set-a-strong-secret-in-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-jwt-secret-in-production}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/instance/eventnet.db}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend/uploads:/app/uploads
-    command: >
-      sh -c "flask db upgrade 2>/dev/null || flask db init && flask db migrate -m 'init' && flask db upgrade;
-             python seed.py && gunicorn --worker-class eventlet -w 1 -b 0.0.0.0:5000 'run:app'"
-
-  celery:
-    build: ./backend
-    command: celery -A app.extensions.celery_app worker --loglevel=info
-    environment:
-      DATABASE_URL: postgresql://eventnet:eventnet@postgres:5432/eventnet
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-    depends_on:
-      - redis
-      - postgres
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@eventnet.io}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@1234}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/login')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
 volumes:
-  postgres_data:
+  eventnet_db:
+    driver: local
+  eventnet_uploads:
+    driver: local

@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}Meetings — Admin{% endblock %}
+{% block content %}
+<div class="admin-page-header">
+  <div>
+    <h1>📅 Meetings</h1>
+    <p>Manage all meetings and events</p>
+  </div>
+  <a href="{{ url_for('admin.create_meeting') }}" class="btn btn-primary">➕ New Meeting</a>
+</div>
+
+<div class="admin-full-table-card">
+  <div class="admin-full-table-header">
+    <h2>All Meetings ({{ meetings|length }})</h2>
+    <input type="text" id="adminTableSearch" placeholder="Search…"
+           style="padding:7px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;width:220px;outline:none;">
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="admin-data-table" id="adminTable">
+      <thead>
+        <tr>
+          <th>#</th><th>Title</th><th>Organizer</th><th>Date</th>
+          <th>Format</th><th>Price</th><th>Seats</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in meetings %}
+        <tr>
+          <td>{{ m.id }}</td>
+          <td><strong>{{ m.title }}</strong></td>
+          <td>{{ m.organizer_name or '—' }}</td>
+          <td>{{ m.start_time.strftime('%b %d, %Y') }}</td>
+          <td>
+            {% if m.is_virtual %}
+              <span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;">🌐 Virtual</span>
+            {% else %}
+              <span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;">📍 In-person</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="price-badge {% if m.is_free %}price-free{% endif %}">
+              {{ 'Free' if m.is_free else '₹'+m.price|string }}
+            </span>
+          </td>
+          <td>{{ m.registered_count }} / {{ m.capacity }}</td>
+          <td><span class="status-badge status-{{ m.status.value }}">{{ m.status.value|title }}</span></td>
+          <td>
+            <div style="display:flex;gap:8px;">
+              <a href="{{ url_for('admin.edit_meeting', meeting_id=m.id) }}" class="btn btn-sm btn-outline">✏ Edit</a>
+              <form method="POST" action="{{ url_for('admin.delete_meeting', meeting_id=m.id) }}"
+                    data-confirm="Delete '{{ m.title }}'?" style="margin:0;">
+                <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="empty-row">No meetings yet. <a href="{{ url_for('admin.create_meeting') }}">Create one</a>.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
